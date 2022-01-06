@@ -1,0 +1,95 @@
+---
+title: "ESM 244 - Lab 1"
+author: "Conner Smith"
+date: "1/6/2022"
+output: html_document
+---
+
+```{r setup, include=TRUE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+library(tidyverse)
+library(here)
+library(sf)
+library(tmap)
+```
+
+
+## Read in data 
+
+```{r}
+sf_trees <- read_csv(here("data", "sf_trees", "sf_trees.csv"),
+                     show_col_types = FALSE)
+# names(sf_trees) gives column names 
+# summary(sf_trees) gives some summary stats 
+```
+
+
+## Review 
+
+**Example 1**
+
+```{r}
+# method 1: group_by %>% summarize
+
+sf_trees %>% 
+  group_by(legal_status) %>% 
+  summarize(tree_count = n())
+
+# method 2: 
+
+top_5_status <- sf_trees %>% 
+  count(legal_status) %>% 
+  drop_na(legal_status) %>%  #don't want to drop NA in other columns 
+  rename(tree_count = n) %>% 
+  relocate(tree_count) %>% 
+  slice_max(tree_count, n = 5) %>% 
+  arrange(desc(tree_count)) #can also add "-" to arrange descending 
+```
+
+# Make a graph of top 5
+
+```{r}
+ggplot(data = top_5_status, aes(x = fct_reorder(legal_status, tree_count), y = tree_count)) +
+  geom_col(fill = "darkgreen") +
+  labs(x = "Legal Status", y = "Tree Count") +
+  coord_flip() +
+  theme_minimal()
+```
+
+**Example 2**
+
+```{r}
+# sf_trees$legal_status %>% unique()
+permitted_data_df <- sf_trees %>% 
+  filter(legal_status == 'Permitted Site', caretaker == 'MTA') 
+# vertical line is "or"
+```
+
+**Example 3**
+
+```{r}
+blackwood_acacia_df <- sf_trees %>% 
+  filter(str_detect(species, 'Blackwood Acacia')) %>% 
+  select(legal_status, date, lat = latitude, lon = longitude)
+
+# make a graph of locations 
+
+ggplot(data = blackwood_acacia_df, aes(x = lon, y = lat)) +
+  geom_point(color = "darkgreen")
+```
+
+**Example 4** 
+
+```{r}
+sf_trees_sep <- sf_trees %>% 
+  separate(species, into = c('spp_scientific', 'spp_common'), sep = ' :: ')
+```
+
+**Example 5** 
+
+```{r}
+sf_trees_unite <- sf_trees %>% 
+  unite("id_status", tree_id, legal_status, sep = '_COOL_')
+```
+
